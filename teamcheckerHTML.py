@@ -182,11 +182,11 @@ class Checker(object):
                 outData = pullData(playerID)
                 output = outputData(outData, output)
             output += "</table></body></html>"
-            output = output.encode(sys.stdout.encoding, errors='replace')
-            output = output.decode("utf-8")
+#            output = output.encode(sys.stdout.encoding, errors='replace')
+#            output = output.decode("utf-8")
             print(output)
             Html_file = open(folder2 + "teamChecker.html","w", encoding = "utf-8")
-            Html_file.write(output.encode("utf-8"))
+            Html_file.write(output)
             Html_file.close()
             webbrowser.open(folder2 + "teamChecker.html")
         
