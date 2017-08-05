@@ -16,7 +16,6 @@ import webbrowser
 import sys
 
 folder = "C:/Program Files (x86)/Steam/steamapps/common/dota 2 beta/game/dota/"
-#folder = "C:/Users/bmburk/Dropbox/Team Checker/"
 folder2 = "E:/Projects/teamChecker/"
 currFile = folder + "server_log.txt"
 
@@ -94,9 +93,6 @@ def outputData(d, output):
            laneL += lanes[lane] + ": " + str(int(round((d[9][lane]/25)* 100))) + "%<br>"
     output += "<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>" % (d[0],  str(d[1]), str(d[2]),  str(d[3]), str(d[4]), str(d[5]) + "%", str(d[6]) + "%", str(d[7]), heroL, laneL)
     return(output) 
-    
-# playerID = '84195549' - me
-# 82293085 - stratz Ken
 
 class Checker(object):
     def __init__(self):
@@ -108,24 +104,10 @@ class Checker(object):
         if stamp != self._cached_stamp:
             self._cached_stamp = stamp
             print('file changed!')
-#            time.sleep(1)
             currGame = idNewGame()
             currGame = currGame[currGame.find("(")+1:currGame.find(")")].split()
-#            if pastG == currGame[1]:
-#                print('same old game')
-#                pass
-#            else:
-#                if len(pastG) != 13:
-#                    print('not 10 heroes')
-#                    pass
-#                else:
             print('checking...')
-#            print('=' * 70)
-#            global pastG = currGame[1]
             del currGame[:3]
-#            print("x" * 50)
-#            print("RADIANT")
-#            print("x" * 50)
             output = """<style type="text/css">
 .zui-table-zebra tbody tr:nth-child(odd) {
     background-color: #fff;
@@ -167,30 +149,22 @@ class Checker(object):
 <html><body><h1>RADIANT</h1><table class="zui-table zui-table-zebra zui-table-horizontal">"""
             output += "<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>" % ("Name", "Total Matches", "Solo MMR", "Recent Games MMR", "Party MMR", "Support %", "Core %", "Unique Heroes", "Heroes >3", "Lanes")
             for i in range(5):
-#                print(colorsDota[i])
                 playerID = currGame[i][3:-1].split(":")[2]
                 outData = pullData(playerID)
                 output = outputData(outData, output)
             output += "</table><br><h1>DIRE</h1><table class=\"zui-table zui-table-zebra zui-table-horizontal\">"
             output += "<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>" % ("Name", "Total Matches", "Solo MMR", "Recent Games MMR", "Party MMR", "Support %", "Core %", "Unique Heroes", "Heroes >3", "Lanes")
-#            print("x" * 50)
-#            print("DIRE")
-#            print("x" * 50)
             for i in range(5,10):
-##                print(colorsDota[i])
                 playerID = currGame[i][3:-1].split(":")[2]
                 outData = pullData(playerID)
                 output = outputData(outData, output)
             output += "</table></body></html>"
-#            output = output.encode(sys.stdout.encoding, errors='replace')
-#            output = output.decode("utf-8")
             print(output)
             Html_file = open(folder2 + "teamChecker.html","w", encoding = "utf-8")
             Html_file.write(output)
             Html_file.close()
             webbrowser.open(folder2 + "teamChecker.html")
         
-
 def trier():
    pub = Checker()
    while True: 
@@ -209,6 +183,5 @@ with open(folder2 + "heroNum.csv") as csvfile:
      next(spamreader)
      for row in spamreader:
          heroDict[row[0]] = row[1]
-
 
 trier()
