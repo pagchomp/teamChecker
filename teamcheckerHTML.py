@@ -13,6 +13,7 @@ import numpy as np
 import pandas as pd
 import csv
 import webbrowser
+import sys
 
 folder = "C:/Program Files (x86)/Steam/steamapps/common/dota 2 beta/game/dota/"
 #folder = "C:/Users/bmburk/Dropbox/Team Checker/"
@@ -107,7 +108,7 @@ class Checker(object):
         if stamp != self._cached_stamp:
             self._cached_stamp = stamp
             print('file changed!')
-            time.sleep(10)
+#            time.sleep(1)
             currGame = idNewGame()
             currGame = currGame[currGame.find("(")+1:currGame.find(")")].split()
 #            if pastG == currGame[1]:
@@ -181,9 +182,11 @@ class Checker(object):
                 outData = pullData(playerID)
                 output = outputData(outData, output)
             output += "</table></body></html>"
+            output = output.encode(sys.stdout.encoding, errors='replace')
+            output = output.decode("utf-8")
             print(output)
-            Html_file = open(folder2 + "teamChecker.html","w")
-            Html_file.write(output)
+            Html_file = open(folder2 + "teamChecker.html","w", encoding = "utf-8")
+            Html_file.write(output.encode("utf-8"))
             Html_file.close()
             webbrowser.open(folder2 + "teamChecker.html")
         
