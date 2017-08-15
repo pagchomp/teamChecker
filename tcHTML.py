@@ -56,7 +56,7 @@ colNamesDict = {'playerName': "Player Name",
         'partyMMR' : "Party MMR",
         'soloMMR' : "Solo MMR",
         'matches' : "Total Matches"
-        }
+}
 
 css = """<style type="text/css">
 .zui-table-zebra tbody tr:nth-child(odd) {
