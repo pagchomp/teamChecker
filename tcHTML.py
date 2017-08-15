@@ -2,62 +2,27 @@
 """
 Created on Fri Aug  4 11:30:35 2017
 
-@author: bmburk
+@author: Brett Burk
 """
 
 import os
 import time
 import json
 import webbrowser
-#import csv
 import urllib.request
 import numpy as np
-#from tkinter import *
-#from tkinter import filedialog
+from tkinter import Tk
+from tkinter import filedialog
 
-#root = Tk()
-#folder2 = filedialog.askdirectory() + "/"
-#root.destroy()
-
-#for k,d in playerDict.items():
-#    print(k, d)
-    
-folder = "C:/Program Files (x86)/Steam/steamapps/common/dota 2 beta/game/dota/"
-folder2 = "E:/Projects/teamChecker/"
-currFile = folder + "server_log.txt"
+folder = os.path.dirname(os.path.realpath(__file__))
 stratzAPI = "https://apibeta.stratz.com/api/v1/"
-playerID = "84195549"
+#playerID = "84195549"
 
 colorsDota = ["Blue", "Teal", "Purple", "Yellow", "Orange",
               "Pink", "Grey", "Light Blue", "Green", "Brown"]
 lanes = ["Roaming", "Safe Lane", "Mid", "Offlane", "Jungle"]
 activity = ["None", "Very Low", "Low", "Medium", "High", "Very High", "Intense"]
 rowOrder = ['playerName', 'recentWinPct', 'recentMMRAvg', 'partyMMR', 'soloMMR', 'matches', 'supports', 'cores', 'uniqueHeroes', 'heroes', 'lanesL']
-
-colorDict = {"Blue" : "2E6AE6",
-   "Teal" : "5DE6AD",
-   "Purple" : "AD00AD",
-   "Yellow" : "DCD90A",
-   "Orange" : "E66200",
-   "Pink" : "E67AB0",
-   "Grey" : "92A440",
-   "Light Blue" : "5CC5E0",
-   "Green" : "00771F",
-   "Brown" : "956000"
-}
-colNamesDict = {'playerName': "Player Name",
-        'supports' : "Support",
-        'cores' : "Core",
-        'recentMMRAvg' : "Recent MMR",
-        'heroes' : "Heroes",
-        'lanesL' : "Lanes",
-        'uniqueHeroes' : "Unique Heroes",
-        'recentWinPct' : "Recent Win %",
-        'partyMMR' : "Party MMR",
-        'soloMMR' : "Solo MMR",
-        'matches' : "Total Matches"
-}
-
 css = """<style type="text/css">
 .zui-table-zebra tbody tr:nth-child(odd) {
     background-color: #fff;
@@ -98,8 +63,32 @@ css = """<style type="text/css">
 </style>
 """
 
+colorDict = {"Blue" : "2E6AE6",
+   "Teal" : "5DE6AD",
+   "Purple" : "AD00AD",
+   "Yellow" : "DCD90A",
+   "Orange" : "E66200",
+   "Pink" : "E67AB0",
+   "Grey" : "92A440",
+   "Light Blue" : "5CC5E0",
+   "Green" : "00771F",
+   "Brown" : "956000"
+}
+colNamesDict = {'playerName': "Player Name",
+        'supports' : "Support",
+        'cores' : "Core",
+        'recentMMRAvg' : "Recent MMR",
+        'heroes' : "Heroes",
+        'lanesL' : "Lanes",
+        'uniqueHeroes' : "Unique Heroes",
+        'recentWinPct' : "Recent Win %",
+        'partyMMR' : "Party MMR",
+        'soloMMR' : "Solo MMR",
+        'matches' : "Total Matches"
+}
+
 def loadHeroes():
-    print('Loading heroes')
+    print('Loading Dota Games...')
     heroDict = {}
     heroLoad = json.loads(urllib.request.urlopen(stratzAPI +
                                           "hero").read().decode('utf-8'))
@@ -113,8 +102,10 @@ def idNewGame():
         searchingGame = True
         temp = list(myfile)
         while searchingGame:
-            if "DOTA_GAMEMODE" in temp[currLine]:
-                return temp[currLine]
+            currGame = temp[currLine]
+            currGame = currGame[currGame.find("(")+1:currGame.find(")")].split()
+            if "DOTA_GAMEMODE" in currGame[2] and len(currGame) >= 13:
+                return currGame
             else:
                 currLine -= 1
 
@@ -131,18 +122,21 @@ def pullData(playerID):
         'recentMMRAvg' : 0,
         'heroes' : [],
         'lanesL' : [0, 0, 0, 0, 0],
+        'lanesWin' : [0, 0, 0, 0, 0],
         'uniqueHeroes' : 0,
         'recentWinPct' : 0,
         'partyMMR' : 0,
         'soloMMR' : 0,
         'matches' : 0
             }
+    
+    # Add: Avatar, color, rankedCount	 vs unRankedCount	, soloCount vs partyCount, activity, avgImp
+    # https://api.opendota.com/api/players/84195549/wordcloud
     try:
         playerDict['supports'] = int(round((behavior['supportCount']/(behavior['supportCount'] +
                                                         behavior['coreCount'])) * 100, 0))
         playerDict['cores'] = 100 - playerDict['supports']
         playerDict['recentMMRAvg'] = int(round(np.mean([k['rank'] for k in behavior['matches']]), 0))
-        playerDict['lanesL'] = [0, 0, 0, 0, 0]
         playerDict['recentWinPct'] = int(round(100 * behavior['winCount']/behavior['matchCount'], 0))
         heroes = behavior['heroes']
         playerDict['uniqueHeroes'] = len(heroes)
@@ -156,20 +150,26 @@ def pullData(playerID):
             currLane = currHero['lanes']
             for l in currLane:
                 playerDict['lanesL'][l['lane']] += l['matchCount']
+                playerDict['lanesWin'][l['lane']] += l['winCount']
+        np.seterr(divide = 'ignore')
+        with np.errstate(divide='ignore', invalid='ignore'):
+            playerDict['lanesWin'] = np.round(np.divide(playerDict['lanesWin'], playerDict['lanesL']) * 100, 0)
+            playerDict['lanesWin'][ ~ np.isfinite(playerDict['lanesWin'])] = 0  # -inf inf NaN
+            playerDict['lanesWin'] = playerDict['lanesWin'].astype(np.int64).tolist()
     except:
-        print("no behavior data")
+        print("No recent behavior data for " + str(player['name']))
     try:
         playerDict['partyMMR'] = player['mmrDetail']['partyValue']
         playerDict['soloMMR'] = player['mmrDetail']['soloValue']
     #    avatar = player['avatar']
     except:
-        print("no player data")
+        print("No MMR data for " + str(player['name']))
     try:
         playerDict['matches'] = json.loads(urllib.request.urlopen(stratzAPI +
                                                     "match/?steamId=" +
                                                     playerID).read().decode('utf-8'))['total']
     except:
-        print("no matches data")
+        print("no matches data for " + str(player['name']))
     return(playerDict)
 
 def outHeroesLanes(playerDict):
@@ -184,7 +184,7 @@ def outHeroesLanes(playerDict):
         elif row == "lanesL":
             laneL = "<td>"
             for lane in range(5):
-                laneL += lanes[lane] + ": " + str(int(round((playerDict['lanesL'][lane]/25)* 100))) + "%<br>"
+                laneL += "%s: %s%%, Win: %s%%<br>" % (lanes[lane], str(int(round((playerDict['lanesL'][lane]/25)* 100))),  str(playerDict['lanesWin'][lane]))
             out += laneL + "</td>"
         else:
             currStr = str(playerDict[row])
@@ -194,10 +194,11 @@ def outHeroesLanes(playerDict):
     return out
 
 def genHTML(output):
-    Html_file = open(folder2 + "teamChecker.html", "w", encoding = "utf-8")
+    print('Generating Website...')
+    Html_file = open(os.path.join(folder, "teamChecker.html"), "w", encoding = "utf-8")
     Html_file.write(output)
     Html_file.close()
-    webbrowser.open(folder2 + "teamChecker.html")
+    webbrowser.open(os.path.join(folder, "teamChecker.html"))
 
 class Checker(object):
     def __init__(self):
@@ -208,17 +209,16 @@ class Checker(object):
         stamp = os.stat(self.filename).st_mtime
         if stamp != self._cached_stamp:
             self._cached_stamp = stamp
-            print('file changed!')
+            print('New Game Found!')
             currGame = idNewGame()
-            currGame = currGame[currGame.find("(")+1:currGame.find(")")].split()
-            print('checking...')
             del currGame[:3]
             output = css
             output += "<html><body>"
             factions = ['RADIANT', 'DIRE']
-            #hack, fix
             output += "<table>"
+            print('Gathering Player Data. . .')
             for i in range(10):
+                 #<td bgcolor="#FF0000">
                 playerID = currGame[i][3:-1].split(":")[2]
                 outData = pullData(playerID)
                 if i == 0 or i == 5:
@@ -231,6 +231,8 @@ class Checker(object):
             output += "</table>"
             output += "</body></html>"
             genHTML(output)
+            print('Finished!')
+            print('Searching for new games...')
         
 def trier():
     pub = Checker()
@@ -240,8 +242,28 @@ def trier():
             pub.check()
         except:
             print('failed')
-            time.sleep(5)
+            time.sleep(2)
             trier()
 
-heroDict = loadHeroes()
-trier()
+def main():
+    global currFile, heroDict
+    dotaFolder = "C:/Program Files (x86)/Steam/steamapps/common/dota 2 beta/game/dota/"
+    currFile = os.path.join(dotaFolder, "server_log.txt")
+    while not os.path.isfile(currFile):
+        root = Tk()
+        root.withdraw()
+        root.overrideredirect(True)
+        root.geometry('0x0+0+0')
+        root.deiconify()
+        root.lift()
+        root.focus_force()
+        dir_opt = {}
+        dir_opt['title'] = 'Please select the "dota 2 beta" folder'
+        dotaFolder = filedialog.askdirectory(**dir_opt) + "/"
+        currFile = os.path.join(dotaFolder, "/game/dota/server_log.txt")
+        root.destroy()  
+    heroDict = loadHeroes()
+    trier()
+
+if __name__ == "__main__":
+    main()
